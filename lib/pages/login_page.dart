@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'home_page.dart';
 import 'register_page.dart';
+import 'admin_dashboard_page.dart';
+import 'responder_home.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -17,9 +19,18 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
 
+  // Static accounts
+  final Map<String, Map<String, dynamic>> _users = {
+    "user@mail.com": {"password": "user123", "role": "user"},
+    "responder@mail.com": {"password": "res123", "role": "responder"},
+    "admin@mail.com": {"password": "admin123", "role": "admin"},
+  };
+
   void _login() async {
-    if (_emailController.text.trim().isEmpty ||
-        _passwordController.text.trim().isEmpty) {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please enter email and password")),
       );
@@ -27,21 +38,35 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     setState(() => _isLoading = true);
-
-    await Future.delayed(const Duration(seconds: 1)); // simulate login process
-
+    await Future.delayed(const Duration(seconds: 1)); // fake loading
     if (!mounted) return;
 
     setState(() => _isLoading = false);
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => HomePage(
-          userName: _emailController.text.split('@').first, // fake user
-        ),
-      ),
-    );
+    if (_users.containsKey(email) && _users[email]!["password"] == password) {
+      final role = _users[email]!["role"];
+
+      Widget nextPage;
+      switch (role) {
+        case "admin":
+          nextPage = const AdminDashboardPage();
+          break;
+        case "responder":
+          nextPage = const ResponderHome();
+          break;
+        default:
+          nextPage = HomePage(userName: email.split('@').first);
+      }
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => nextPage),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Invalid email or password")),
+      );
+    }
   }
 
   @override

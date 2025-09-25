@@ -1,405 +1,401 @@
 // lib/pages/home_page.dart
 import 'package:flutter/material.dart';
-import 'login_page.dart';
-import 'package:intl/intl.dart'; // make sure intl: ^0.19.0 is in pubspec.yaml
+import 'package:url_launcher/url_launcher.dart';
+import 'report_incident_page.dart';
 
 class HomePage extends StatefulWidget {
   final String userName;
+
   const HomePage({super.key, required this.userName});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
+  late AnimationController _animationController;
 
-  void _signOut() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const LoginPage()),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
   }
 
   @override
-  Widget build(BuildContext context) {
-    final pages = [
-      _HomeScreen(userName: widget.userName),
-      const _ReportsScreen(),
-      const _ContactsScreen(),
-      const _MessagingScreen(),
-      _SettingsScreen(onSignOut: _signOut),
-    ];
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
-    return Scaffold(
-      body: SafeArea(child: pages[_currentIndex]),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        selectedItemColor: Colors.red,
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        onTap: (index) => setState(() => _currentIndex = index),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_rounded),
-            label: "Home",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment_rounded),
-            label: "Reports",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_alt_rounded),
-            label: "Contacts",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.message_rounded),
-            label: "Messages",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings_rounded),
-            label: "Settings",
+  // Call 911
+  Future<void> _call911() async {
+    final Uri telUri = Uri(scheme: 'tel', path: '911');
+    if (await canLaunchUrl(telUri)) {
+      await launchUrl(telUri);
+    }
+  }
+
+  // Send text alert
+  Future<void> _sendTextAlert() async {
+    final Uri smsUri = Uri(
+      scheme: 'sms',
+      path: '911',
+      queryParameters: {'body': 'Emergency! Please send help immediately.'},
+    );
+    if (await canLaunchUrl(smsUri)) {
+      await launchUrl(smsUri);
+    }
+  }
+
+  Widget _buildAgencyCard(IconData icon, String label) {
+    return Container(
+      width: 95,
+      margin: const EdgeInsets.only(right: 10),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F4F9), // calm background
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.blueGrey[700], size: 32),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Colors.blueGrey[800],
+            ),
           ),
         ],
       ),
     );
   }
-}
 
-//
-// HOME SCREEN
-//
-class _HomeScreen extends StatelessWidget {
-  final String userName;
-  const _HomeScreen({required this.userName});
+  Widget _buildBottomNav() {
+    final items = [
+      {"icon": Icons.home_outlined, "label": "Home"},
+      {"icon": Icons.assignment_outlined, "label": "Reports"},
+      {"icon": Icons.chat_bubble_outline, "label": "Messages"},
+      {"icon": Icons.settings_outlined, "label": "Settings"},
+    ];
+
+    return Container(
+      color: Colors.white,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Call & Text bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _call911,
+                    icon: const Icon(Icons.call, color: Colors.blue),
+                    label: const Text(
+                      "Call 911",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(color: Colors.blue),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _sendTextAlert,
+                    icon: const Icon(Icons.message, color: Colors.green),
+                    label: const Text(
+                      "Text Alert",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        side: const BorderSide(color: Colors.green),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Modern nav bar
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(items.length, (index) {
+              final selected = _currentIndex == index;
+              return GestureDetector(
+                onTap: () {
+                  setState(() => _currentIndex = index);
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? Colors.red.withOpacity(0.1)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        items[index]["icon"] as IconData,
+                        color: selected ? Colors.red : Colors.grey,
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        items[index]["label"] as String,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: selected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: selected ? Colors.red : Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 6),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Header
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-          decoration: BoxDecoration(
-            color: Colors.red.shade50,
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-            ),
-          ),
-          child: Row(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return Scaffold(
+      backgroundColor: Colors.white,
+      bottomNavigationBar: _buildBottomNav(),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Greeting
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    "Welcome back,",
-                    style: TextStyle(fontSize: 16, color: Colors.black54),
-                  ),
-                  const SizedBox(height: 4),
                   Text(
-                    userName,
+                    "Welcome back,\n${widget.userName}",
                     style: const TextStyle(
-                      fontSize: 22,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                ],
-              ),
-              const Spacer(),
-              const CircleAvatar(
-                radius: 26,
-                backgroundImage: NetworkImage(
-                  "https://i.pravatar.cc/150?img=47",
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 30),
-        const Text(
-          "Having an Emergency?",
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          "Press the button below\nhelp will arrive soon.",
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 16, color: Colors.black54),
-        ),
-        const SizedBox(height: 40),
-
-        // Emergency Button
-        Expanded(
-          child: Center(
-            child: GestureDetector(
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("🚨 Calling Emergency...")),
-                );
-              },
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: 220,
-                    height: 220,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.red.withOpacity(0.1),
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundImage: const AssetImage(
+                      "assets/images/profile.jpg",
                     ),
-                  ),
-                  Container(
-                    width: 170,
-                    height: 170,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.red.withOpacity(0.2),
-                    ),
-                  ),
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [Colors.red, Colors.redAccent],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.redAccent,
-                          blurRadius: 20,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.call,
-                      size: 50,
-                      color: Colors.white,
-                    ),
+                    onBackgroundImageError: (_, __) {
+                      // Fallback if image fails
+                    },
+                    backgroundColor: Colors.grey[400],
+                    child: const Icon(Icons.person, color: Colors.white),
                   ),
                 ],
               ),
             ),
-          ),
-        ),
 
-        // New Emergency Report Button
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 10),
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.report, color: Colors.white),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => EmergencyReportPage(userName: userName),
-                ),
-              );
-            },
-            label: const Text(
-              "Send Emergency Report",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-}
-
-//
-// EMERGENCY REPORT PAGE
-//
-class EmergencyReportPage extends StatefulWidget {
-  final String userName;
-  const EmergencyReportPage({super.key, required this.userName});
-
-  @override
-  State<EmergencyReportPage> createState() => _EmergencyReportPageState();
-}
-
-class _EmergencyReportPageState extends State<EmergencyReportPage> {
-  final _formKey = GlobalKey<FormState>();
-  String? _emergencyType;
-  String? _severity;
-  final _descController = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    final incidentTime = DateFormat(
-      "yyyy-MM-dd HH:mm:ss",
-    ).format(DateTime.now());
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Emergency Report"),
-        backgroundColor: Colors.red,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              const Text(
-                "Location (GPS): [Lat, Long]",
-                style: TextStyle(fontSize: 14, color: Colors.black54),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                "Address: (Auto fetched here)",
-                style: TextStyle(fontSize: 14, color: Colors.black54),
-              ),
-              const SizedBox(height: 20),
-
-              TextFormField(
-                decoration: const InputDecoration(
-                  labelText: "Indoor Details (room, floor, building)",
-                ),
-              ),
-
-              const SizedBox(height: 20),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: "Type of Emergency",
-                ),
-                items:
-                    ["Fire", "Medical", "Accident", "Crime", "Natural Disaster"]
-                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                        .toList(),
-                onChanged: (val) => setState(() => _emergencyType = val),
-                validator: (val) =>
-                    val == null ? "Please select emergency type" : null,
-              ),
-
-              const SizedBox(height: 20),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: "Severity/Urgency",
-                ),
-                items: ["Low", "Medium", "High", "Critical"]
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (val) => setState(() => _severity = val),
-                validator: (val) =>
-                    val == null ? "Please select severity" : null,
-              ),
-
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _descController,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: "Description"),
-              ),
-
-              const SizedBox(height: 20),
-              const Text(
-                "Photo/Video Evidence (optional)",
-                style: TextStyle(color: Colors.black54),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.attach_file),
-                label: const Text("Upload File"),
-              ),
-
-              const SizedBox(height: 20),
-              Text("Time of Incident: $incidentTime"),
-              Text("Reporter: ${widget.userName}"),
-
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    debugPrint("Emergency Type: $_emergencyType");
-                    debugPrint("Severity: $_severity");
-                    debugPrint("Description: ${_descController.text}");
-                    debugPrint("Time: $incidentTime");
-                    debugPrint("Reporter: ${widget.userName}");
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("✅ Emergency report submitted"),
+            // Emergency Button with soft radiating pulse
+            Expanded(
+              flex: 4,
+              child: Center(
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ReportIncidentPage(),
                       ),
                     );
-                    Navigator.pop(context);
-                  }
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text(
-                  "Submit Report",
-                  style: TextStyle(color: Colors.white),
+                  },
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      ScaleTransition(
+                        scale: Tween(begin: 1.0, end: 1.3).animate(
+                          CurvedAnimation(
+                            parent: _animationController,
+                            curve: Curves.easeInOut,
+                          ),
+                        ),
+                        child: Container(
+                          width: 240,
+                          height: 240,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              colors: [
+                                Color.fromARGB(120, 244, 67, 54),
+                                Colors.transparent,
+                              ],
+                              stops: [0.6, 1.0],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: 170,
+                        height: 170,
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Icon(
+                              Icons.warning_amber_rounded,
+                              size: 70,
+                              color: Colors.white,
+                            ),
+                            SizedBox(height: 10),
+                            Text(
+                              "EMERGENCY",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              "Tap for Help",
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ],
-          ),
+            ),
+
+            // Agencies
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Agencies",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 100,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          _buildAgencyCard(Icons.local_hospital, "Ambulance"),
+                          _buildAgencyCard(Icons.local_fire_department, "Fire"),
+                          _buildAgencyCard(Icons.local_police, "Police"),
+                          _buildAgencyCard(Icons.groups, "CDRRMO"),
+                          _buildAgencyCard(Icons.more_horiz, "Others"),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Recent Reports
+            Expanded(
+              flex: 3,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Recent Reports",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {},
+                            child: const Text(
+                              "View All",
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        "• Medical Emergency - 2h ago",
+                        style: TextStyle(fontSize: 13),
+                      ),
+                      const Text(
+                        "• Traffic Accident - 1d ago",
+                        style: TextStyle(fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
-  }
-}
-
-//
-// REPORTS SCREEN (placeholder)
-//
-class _ReportsScreen extends StatelessWidget {
-  const _ReportsScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("Reports Page"));
-  }
-}
-
-//
-// CONTACTS SCREEN
-//
-class _ContactsScreen extends StatelessWidget {
-  const _ContactsScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("Contacts Page"));
-  }
-}
-
-//
-// MESSAGING SCREEN
-//
-class _MessagingScreen extends StatelessWidget {
-  const _MessagingScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("Messaging Page"));
-  }
-}
-
-//
-// SETTINGS SCREEN
-//
-class _SettingsScreen extends StatelessWidget {
-  final VoidCallback onSignOut;
-  const _SettingsScreen({required this.onSignOut});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("Settings Page"));
   }
 }
